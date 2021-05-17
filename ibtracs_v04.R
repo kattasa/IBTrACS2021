@@ -164,51 +164,81 @@ dev.off()
 
 
 
-### North Atlantic
+### MWS against year 
 
-### mws 
+library(dplyr)
+library(ggplot2)
+library(sp)
+library(sf)
+library(scico)
+library(scales)
+
+theme_mat = theme(#plot.title = element_text(size = rel(1.2)),
+            #panel.background = element_blank(),
+            panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(),
+            legend.key.size = unit(1.0, "cm"),
+            legend.key.width = unit(0.2,"cm"),
+            legend.box.spacing = unit(0.1, "cm"),
+            legend.box.margin = margin(0, 0, 0, 0, "cm"),
+                plot.margin = margin(-0.95, 0.05, -0.02, -0.01, "cm"),
+              axis.text=element_text(size=14),
+              axis.title=element_text(size=14),
+              axis.title.x=element_text(size=14),
+              axis.text.x=element_text(size=14),
+              axis.title.y=element_text(size=14),
+              axis.text.y=element_text(size=14),
+              legend.text=element_text(size=14),
+              legend.title=element_text(size=14))
+
+
+colnames(mws) = season
+mws.df = as.data.frame(as.table(mws))
+mws.df = mws.df %>% 
+        dplyr::rename(
+        mws = Freq,
+        year = Var2
+        )
+
+colnames(Lat) = season
+Lat.df = as.data.frame(as.table(Lat))
+colnames(Lon) = season
+Lon.df = as.data.frame(as.table(Lon))
+
+mws.df$lat = Lat.df$Freq
+mws.df$long = Lon.df$Freq 
+mws.df = mws.df[complete.cases(mws.df), ]
+
+# North Atlantic 
 window = (mws.df$long>-100 & mws.df$long<=-60 & 
             mws.df$lat>=15 & mws.df$lat<=50)
+
 mws.df.NA = mws.df[window, ]
 
-png("./figures/global_map_mws_NA.png", width=800, height=600, 
-    units="px", pointsize=16)
-parset = par(mar=c(0,0,0,5)+2)
-map("world", mar=rep(0,4)+1, xlim=c(-95,-60),
-    ylim=c(15,50), col="white", fill=T, lwd=0.05)
+mws.df.NA$long[mws.df.NA$long>180] = NA
+mws.df.NA = mws.df.NA[complete.cases(mws.df.NA), ]
 
-image.plot(legend.only=T, zlim=c(0,95), col=viridis(6))
-val = color.scale(mws.df.NA$value, col=alpha(viridis(6), 1))
-points(mws.df.NA$long, mws.df.NA$lat, col=val, pch=16, cex=0.6)
+g.mws.NA = ggplot(mws.df.NA) + 
+        geom_point(aes(x=year, y=mws), size=1) + 
+        theme(axis.text.x = element_text(angle=90))  
+print(g.mws.NA + theme_mat)
 
-title("Maximum sustained wind speed")
-map("world", mar=rep(0,4)+1, xlim=c(-95,-60),
-    ylim=c(15,50), lwd=1.25, add=T)
-map("state", mar=rep(0,4)+1, xlim=c(-95,-60),
-    ylim=c(15,50), lwd=1.25, add=T)
-par(parset)
-dev.off()
 
-### SSHS 
-window = (sshs.df$long>-100 & sshs.df$long<=-60 & 
-            sshs.df$lat>=15 & sshs.df$lat<=50)
-sshs.df.NA = sshs.df[window, ]
+### Spatial Map of MWS 
+mws.sf = mws.df.NA
+sp::coordinates(mws.sf) = ~long+lat
+sf.df = sf::st_as_sf(mws.sf)
+sf::st_crs(sf.df) = 4326
 
-png("./figures/global_map_sshs_NA.png", width=800, height=600, 
-    units="px", pointsize=16)
-parset = par(mar=c(0,0,0,5)+2)
-map("world", mar=rep(0,4)+1, xlim=c(-95,-60),
-    ylim=c(15,50), col="white", fill=T, lwd=0.05)
-
-image.plot(legend.only=T, zlim=c(0,5), col=viridis(6))
-val = color.scale(sshs.df.NA$value+1, col=alpha(viridis(6), 1))
-points(sshs.df.NA$long, sshs.df.NA$lat, col=val, pch=16, cex=0.6)
-
-title("Saffir-Simpson hurricane scale")
-map("world", mar=rep(0,4)+1, xlim=c(-95,-60),
-    ylim=c(15,50), lwd=1.25, add=T)
-map("state", mar=rep(0,4)+1, xlim=c(-95,-60),
-    ylim=c(15,50), lwd=1.25, add=T)
-par(parset)
-dev.off()
+g = ggplot() + 
+    geom_sf(data=sf.df, mapping=aes(color=mws), size=1, 
+        inherit.aes = FALSE) + 
+    scale_color_gradientn(colours=scico::scico(50, direction=-1, 
+                                               palette="roma"),
+                          name="m/s", limits=c(20, 80),
+                          oob=scales::squish, breaks=seq(20,80,length.out=4)) + 
+    scale_x_continuous(breaks=seq(-100,-60, length.out=5)) + 
+    scale_y_continuous(breaks=seq(15, 50, length.out=6))
+    
+print(g)
 
