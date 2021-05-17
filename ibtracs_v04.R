@@ -1,7 +1,6 @@
-
 rm(list=ls())
 
-setwd("~/Misc/Teaching/IBTrACS2021")
+# setwd("~/Misc/Teaching/IBTrACS2021")
 
 
 ### load library to read .nc files
@@ -10,7 +9,7 @@ library(ggplot2)
 library(plyr)
 ### load all storms available in the IBTrACS record
 #storms <- nc_open("./data/IBTrACS.ALL.v04r00.nc")
-storms = nc_open("./data/IBTrACS.since1980.v04r00.nc")
+storms = nc_open("./IBTrACS.since1980.v04r00.nc")
 #print(storms)
 #nc_close(storms)
 
